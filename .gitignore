@@ -1,0 +1,32 @@
+# Go build artifacts
+/exchange-rate-service
+*.out
+
+# Go test & coverage files
+*.test
+*.cover
+*.log
+
+# Build & binary output directories
+/build/
+/bin/
+
+# macOS system files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE config
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment & secret files
+.env
+.env.*
+
+# Redis local data (if persisted)
+redis-data/
+
+# Backup files
+*.bak
