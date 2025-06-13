@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ItsDee25/exchange-rate-service/internal/domain"
+	domain "github.com/ItsDee25/exchange-rate-service/internal/domain/currency"
 	"github.com/gin-gonic/gin"
 )
 
@@ -42,7 +42,7 @@ func (controller *currencyController) ConvertCurrencyHandler(c *gin.Context) {
 		return
 	}
 
-	convertedAmount, err := controller.currencyUsecase.GetConvertedCurrency(from, to, date, amount)
+	convertedAmount, err := controller.currencyUsecase.GetConvertedCurrency(c.Request.Context(), from, to, date, amount)
 	if err != nil {
 		log.Println("Error converting currency:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to convert currency"})
@@ -74,7 +74,7 @@ func (controller *currencyController) GetExchangeRateHandler(c *gin.Context) {
 		return
 	}
 
-	rate, err := controller.currencyUsecase.GetExchangeRate(from, to, date)
+	rate, err := controller.currencyUsecase.GetExchangeRate(c.Request.Context(), from, to, date)
 	if err != nil {
 		log.Println("Error getting exchange rate:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get exchange rate"})

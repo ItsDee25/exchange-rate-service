@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     container_name: exchange-rate-service
@@ -7,19 +9,19 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - REDIS_HOST=redis:6379
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
     depends_on:
-      - redis
+      - dynamodb-local
     restart: unless-stopped
 
-  redis:
-    container_name: exchange-redis
-    image: redis:7
+  dynamodb-local:
+    container_name: exchange-dynamo
+    image: amazon/dynamodb-local
     ports:
-      - "6379:6379"
+      - "8000:8000"
     volumes:
-      - redis-data:/data
+      - dynamo-data:/home/dynamodblocal/data
     restart: unless-stopped
 
 volumes:
-  redis-data:
+  dynamo-data:
