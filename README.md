@@ -56,7 +56,7 @@ DynamoDB TTL is used to automatically purge data older than 90 days.
 
 #### ⏱️ Hourly Refresh Job
 - Runs every **30 minutes** to make sure atmost 1 hour data staleness is there in multi service-container environment
-- Uses a **distributed lock in DynamoDB** to ensure only one container makes third party call for current day and updates dynamo and in memory cache.
+- Uses a **distributed lock in DynamoDB** to ensure only one container makes third party call for current day and updates dynamo and in memory cache (write-through strategy)
 - If service instance fails to acquire lock, it gets latest data from dynamo and updates in memory cache
 
 
@@ -104,6 +104,7 @@ exchange-rate-service/
 └── README.md
 ├── assets/
 │   └── hld.png
+├── infra/  #third party api calls
 ```
 ---
 
