@@ -4,60 +4,91 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
+	"github.com/ItsDee25/exchange-rate-service/pkg/constants"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-type DynamoRepository struct {
+const (
+	PartitionKey = "pk"
+	SortKey      = "sk"
+	TTL          = "ttl"
+	Rate         = "rate"
+	UpdatedAt    = "updated_at"
+)
+
+const TTLDuration = 90 * 24 * time.Hour // 90 days
+
+type currencyDynamoRepository struct {
 	client    *dynamodb.Client
+	cache     *rateCache
 	tableName string
-	cache     sync.Map // in-memory: map[string]float64
 }
 
-func NewDynamoRepository(ctx context.Context, tableName string) (*DynamoRepository, error) {
-	customResolver := aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
-		if ep := os.Getenv("DYNAMO_ENDPOINT"); ep != "" {
-			return aws.Endpoint{URL: ep}, nil
-		}
-		return aws.Endpoint{}, fmt.Errorf("no endpoint set")
-	})
+type rateCache struct {
+	cache sync.Map
+}
 
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion("us-west-2"),
-		config.WithEndpointResolver(customResolver),
-	)
-	if err != nil {
-		return nil, err
+func newRateCache() *rateCache {
+	return &rateCache{}
+}
+
+func (c *rateCache) get(key string) (float64, bool) {
+	val, ok := c.cache.Load(key)
+	if !ok {
+		return 0, false
 	}
+	rate, ok := val.(float64)
+	return rate, ok
+}
 
-	return &DynamoRepository{
-		client:    dynamodb.NewFromConfig(cfg),
-		tableName: tableName,
+func (c *rateCache) set(key string, rate float64) {
+	c.cache.Store(key, rate)
+}
+
+func NewDynamoRepository(ctx context.Context, client *dynamodb.Client) (*currencyDynamoRepository, error) {
+	return &currencyDynamoRepository{
+		client:    client,
+		tableName: "currency_rates",
+		cache:     newRateCache(),
 	}, nil
 }
 
-func (r *DynamoRepository) GetRate(ctx context.Context, from, to, date string) (float64, error) {
-	key := fmt.Sprintf("%s#%s#%s", from, to, date)
+func getPartitionKey(from, to string) string {
+	return fmt.Sprintf("%s#%s", from, to)
+}
 
+func getCacheKey(from, to, date string) string {
+	return fmt.Sprintf("%s#%s#%s", from, to, date)
+}
+
+func getDynamoItemTTL(date string) (int64, error) {
+	rateDate, err := time.Parse(constants.DateLayout, date)
+	if err != nil {
+		return 0, fmt.Errorf("invalid date format: %w", err)
+	}
+	return rateDate.Add(TTLDuration).Unix(), nil
+}
+
+func (r *currencyDynamoRepository) GetRate(ctx context.Context, from, to, date string) (float64, error) {
+	pk := getPartitionKey(from, to)
+	cacheKey := getCacheKey(from, to, date)
 	// Check local cache first
-	if val, ok := r.cache.Load(key); ok {
-		if rate, ok := val.(float64); ok {
-			return rate, nil
-		}
+	if val, ok := r.cache.get(cacheKey); ok {
+		return val, nil
 	}
 
 	// Fetch from DynamoDB
 	result, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(r.tableName),
 		Key: map[string]types.AttributeValue{
-			"rate_key": &types.AttributeValueMemberS{Value: key},
+			PartitionKey: &types.AttributeValueMemberS{Value: pk},
+			SortKey:      &types.AttributeValueMemberS{Value: date},
 		},
 	})
 	if err != nil {
@@ -76,25 +107,27 @@ func (r *DynamoRepository) GetRate(ctx context.Context, from, to, date string) (
 	}
 
 	// Update local cache
-	r.cache.Store(key, item.Rate)
+	r.cache.set(cacheKey, item.Rate)
 
 	return item.Rate, nil
 }
 
-func (r *DynamoRepository) SaveRate(ctx context.Context, from, to, date string, rate float64) error {
-	key := fmt.Sprintf("%s#%s#%s", from, to, date)
+func (r *currencyDynamoRepository) SaveRate(ctx context.Context, from, to, date string, rate float64) error {
+	pk := getPartitionKey(from, to)
+	cacheKey := getCacheKey(from, to, date)
 
-	rateDate, err := time.Parse("2006-01-02", date)
+	ttl, err := getDynamoItemTTL(date)
+
 	if err != nil {
-		return fmt.Errorf("invalid date format: %w", err)
+		return err
 	}
-	ttl := rateDate.Add(90 * 24 * time.Hour).Unix()
 
 	item := map[string]interface{}{
-		"rate_key":   key,
-		"rate":       rate,
-		"updated_at": time.Now().Unix(),
-		"ttl":        ttl,
+		PartitionKey: pk,
+		SortKey:      date,
+		Rate:         rate,
+		UpdatedAt:    time.Now().Unix(),
+		TTL:          ttl,
 	}
 
 	av, err := attributevalue.MarshalMap(item)
@@ -107,10 +140,10 @@ func (r *DynamoRepository) SaveRate(ctx context.Context, from, to, date string, 
 		Item:      av,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("error saving rate: %w", err)
 	}
 
 	// Update cache
-	r.cache.Store(key, rate)
+	r.cache.set(cacheKey, rate)
 	return nil
 }
