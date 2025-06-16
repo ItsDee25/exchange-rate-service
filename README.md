@@ -98,15 +98,15 @@ exchange-rate-service/
 │ ├── repository/ # data layer
 │ ├── usecase/ # Business logic
 ├── pkg/ # Shared utils (clients, constants)
+├── infra/  #third party api calls, non-domain specific api calls
+├── mocks/  #data mocks
+├── jobs/  # contains cron jobs for refreshing and cleaning cache
 ├── Dockerfile # Go app container
 ├── docker-compose.yml # App + DynamoDb setup
 ├── go.mod / go.sum # Dependencies
 └── README.md
 ├── assets/
 │   └── hld.png
-├── infra/  #third party api calls
-├── mocks/  #data mocks
-├── jobs/  # contains cron jobs for refreshing and cleaning cache
 ```
 ---
 

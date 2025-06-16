@@ -1,4 +1,4 @@
-package ratefetcher
+package infra
 
 import (
 	"encoding/json"

@@ -18,7 +18,6 @@ import (
 
 const (
 	ttlDuration     = 90 * 24 * time.Hour
-	dynamoTableName = "currency_exchange_rate" // 90 days
 )
 
 type currencyDynamoRepository struct {
@@ -31,7 +30,7 @@ type currencyDynamoRepository struct {
 func NewDynamoRepository(client *dynamodb.Client, rateFetcher domain.IRateFetcher, cache domain.IRateCache) (*currencyDynamoRepository, error) {
 	return &currencyDynamoRepository{
 		client:      client,
-		tableName:   dynamoTableName,
+		tableName:   constants.TableName,
 		cache:       cache,
 		rateFetcher: rateFetcher,
 	}, nil
