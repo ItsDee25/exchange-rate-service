@@ -105,6 +105,8 @@ exchange-rate-service/
 ├── assets/
 │   └── hld.png
 ├── infra/  #third party api calls
+├── mocks/  #data mocks
+├── jobs/  # contains cron jobs for refreshing and cleaning cache
 ```
 ---
 
