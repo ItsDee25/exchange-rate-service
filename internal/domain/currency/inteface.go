@@ -23,8 +23,8 @@ type IRefresherRepository interface {
 
 type IRateCache interface {
 	Get(ctx context.Context, key string) (float64, bool)
-	Set(ctx context.Context, key string, value float64) error
-	Delete(ctx context.Context, key string) error
+	Set(ctx context.Context, key string, value float64)
+	Delete(ctx context.Context, key string)
 	ScanAndDeleteExipred(ctx context.Context)
 }
 

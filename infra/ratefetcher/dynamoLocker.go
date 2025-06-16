@@ -12,19 +12,19 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-type dynamoLocker struct {
+type DynamoLocker struct {
 	tableName string
 	client    *dynamodb.Client
 }
 
-func NewDynamoLocker(client *dynamodb.Client) *dynamoLocker {
-	return &dynamoLocker{
+func NewDynamoLocker(client *dynamodb.Client) *DynamoLocker {
+	return &DynamoLocker{
 		tableName: constants.TableName,
 		client:    client,
 	}
 }
 
-func (l *dynamoLocker) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+func (l *DynamoLocker) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
 	expiresAt := time.Now().Add(ttl).Unix()
 
 	item := map[string]types.AttributeValue{

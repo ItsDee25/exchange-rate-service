@@ -1,6 +1,7 @@
 package infra
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -26,7 +27,7 @@ type apiResponse struct {
 }
 
 // FetchRate implements RateFetcher
-func (e *ExchangeRateAPI) FetchRate(from, to, date string) (float64, error) {
+func (e *ExchangeRateAPI) FetchRate(ctx context.Context, from, to, date string) (float64, error) {
 	url := fmt.Sprintf("%s/%s?from=%s&to=%s", e.baseURL, date, from, to)
 
 	resp, err := e.httpClient.Get(url)

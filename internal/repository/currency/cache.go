@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"strings"
 	"sync"
 	"time"
@@ -8,15 +9,15 @@ import (
 	"github.com/ItsDee25/exchange-rate-service/pkg/constants"
 )
 
-type rateCache struct {
+type RateCache struct {
 	cache sync.Map
 }
 
-func NewRateCache() *rateCache {
-	return &rateCache{}
+func NewRateCache() *RateCache {
+	return &RateCache{}
 }
 
-func (c *rateCache) Get(key string) (float64, bool) {
+func (c *RateCache) Get(ctx context.Context, key string) (float64, bool) {
 	val, ok := c.cache.Load(key)
 	if !ok {
 		return 0, false
@@ -25,15 +26,15 @@ func (c *rateCache) Get(key string) (float64, bool) {
 	return rate, ok
 }
 
-func (c *rateCache) Set(key string, rate float64) {
+func (c *RateCache) Set(ctx context.Context, key string, rate float64) {
 	c.cache.Store(key, rate)
 }
 
-func (c *rateCache) Delete(key string) {
+func (c *RateCache) Delete(ctx context.Context, key string) {
 	c.cache.Delete(key)
 }
 
-func (c *rateCache) ScanAndDeleteExipred() {
+func (c *RateCache) ScanAndDeleteExipred(ctx context.Context) {
 	now := time.Now()
 	deleted := 0
 	c.cache.Range(func(key, value any) bool {

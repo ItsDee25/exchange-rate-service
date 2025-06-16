@@ -2,14 +2,12 @@ package controller
 
 import (
 	"time"
+
+	constants "github.com/ItsDee25/exchange-rate-service/internal/constants/currency"
 )
 
-var allowedCurrencies = map[string]struct{}{
-	"USD": {}, "INR": {}, "EUR": {}, "JPY": {}, "GBP": {},
-}
-
 func isValidCurrency(code string) bool {
-	_, exists := allowedCurrencies[code]
+	_, exists := constants.SupportedCurrencies[code]
 	return exists
 }
 

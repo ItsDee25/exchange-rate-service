@@ -20,20 +20,20 @@ const (
 	ttlDuration     = 90 * 24 * time.Hour
 )
 
-type currencyDynamoRepository struct {
+type CurrencyDynamoRepository struct {
 	client      *dynamodb.Client
 	cache       domain.IRateCache
 	tableName   string
 	rateFetcher domain.IRateFetcher
 }
 
-func NewDynamoRepository(client *dynamodb.Client, rateFetcher domain.IRateFetcher, cache domain.IRateCache) (*currencyDynamoRepository, error) {
-	return &currencyDynamoRepository{
+func NewDynamoRepository(client *dynamodb.Client, rateFetcher domain.IRateFetcher, cache domain.IRateCache) *CurrencyDynamoRepository {
+	return &CurrencyDynamoRepository{
 		client:      client,
 		tableName:   constants.TableName,
 		cache:       cache,
 		rateFetcher: rateFetcher,
-	}, nil
+	}
 }
 
 func getPartitionKey(from, to string) string {
@@ -60,7 +60,7 @@ func getDynamoItemTTL(date string) (int64, error) {
 	return rateDate.Add(ttlDuration).Unix(), nil
 }
 
-func (r *currencyDynamoRepository) GetDataFromDB(ctx context.Context, from, to, date string) (float64, error) {
+func (r *CurrencyDynamoRepository) GetDataFromDB(ctx context.Context, from, to, date string) (float64, error) {
 	pk := getPartitionKey(from, to)
 	result, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(r.tableName),
@@ -87,7 +87,7 @@ func (r *currencyDynamoRepository) GetDataFromDB(ctx context.Context, from, to, 
 	return item.Rate, nil
 }
 
-func (r *currencyDynamoRepository) SaveRateInDB(ctx context.Context, from, to, date string, rate float64) error {
+func (r *CurrencyDynamoRepository) SaveRateInDB(ctx context.Context, from, to, date string, rate float64) error {
 	pk := getPartitionKey(from, to)
 	ttl, err := getDynamoItemTTL(date)
 
@@ -115,7 +115,7 @@ func (r *currencyDynamoRepository) SaveRateInDB(ctx context.Context, from, to, d
 	return err
 }
 
-func (r *currencyDynamoRepository) GetRate(ctx context.Context, from, to, date string) (float64, error) {
+func (r *CurrencyDynamoRepository) GetRate(ctx context.Context, from, to, date string) (float64, error) {
 	cacheKey := getCacheKey(from, to, date)
 	// Check local cache first
 	if val, ok := r.cache.Get(ctx, cacheKey); ok {
@@ -146,7 +146,7 @@ func (r *currencyDynamoRepository) GetRate(ctx context.Context, from, to, date s
 	return rate, nil
 }
 
-func (r *currencyDynamoRepository) SaveRate(ctx context.Context, from, to, date string, rate float64) error {
+func (r *CurrencyDynamoRepository) SaveRate(ctx context.Context, from, to, date string, rate float64) error {
 	cacheKey := getCacheKey(from, to, date)
 	err := r.SaveRateInDB(ctx, from, to, date, rate)
 	if err != nil {
@@ -158,7 +158,7 @@ func (r *currencyDynamoRepository) SaveRate(ctx context.Context, from, to, date 
 	return nil
 }
 
-func (r *currencyDynamoRepository) BatchGetFromDB(ctx context.Context, req []domain.RateKeyRequest) ([]domain.RateKey, error) {
+func (r *CurrencyDynamoRepository) BatchGetFromDB(ctx context.Context, req []domain.RateKeyRequest) ([]domain.RateKey, error) {
 	if len(req) == 0 {
 		return nil, nil
 	}
@@ -212,7 +212,7 @@ func (r *currencyDynamoRepository) BatchGetFromDB(ctx context.Context, req []dom
 	return result, nil
 }
 
-func (r *currencyDynamoRepository) BatchUpdateDB(ctx context.Context, rates []domain.RateKey) error {
+func (r *CurrencyDynamoRepository) BatchUpdateDB(ctx context.Context, rates []domain.RateKey) error {
 	if len(rates) == 0 {
 		return nil
 	}
@@ -263,7 +263,7 @@ func (r *currencyDynamoRepository) BatchUpdateDB(ctx context.Context, rates []do
 	return nil
 }
 
-func (r *currencyDynamoRepository) BatchUpdateCache(ctx context.Context, rates []domain.RateKey) error {
+func (r *CurrencyDynamoRepository) BatchUpdateCache(ctx context.Context, rates []domain.RateKey) error {
 	for _, rate := range rates {
 		cacheKey := getCacheKey(rate.From, rate.To, rate.Date)
 		r.cache.Set(ctx, cacheKey, rate.Rate)
@@ -271,7 +271,7 @@ func (r *currencyDynamoRepository) BatchUpdateCache(ctx context.Context, rates [
 	return nil
 }
 
-func (r *currencyDynamoRepository) BatchDeleteFromCache(ctx context.Context, req []domain.RateKeyRequest) error {
+func (r *CurrencyDynamoRepository) BatchDeleteFromCache(ctx context.Context, req []domain.RateKeyRequest) error {
 	for _, k := range req {
 		cacheKey := getCacheKey(k.From, k.To, k.Date)
 		r.cache.Delete(ctx, cacheKey)

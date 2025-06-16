@@ -6,5 +6,6 @@ import (
 
 func main() { // Initialize the server
 
+	// set env variables
 	bootstrap.InitServer()
 }
