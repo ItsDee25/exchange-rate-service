@@ -1,0 +1,29 @@
+# Binaries
+bin/
+main
+
+# Git
+.git
+.gitignore
+
+# Dependency directories
+vendor/
+
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment files
+.env
+
+# Mock/generated files (optional, if you regen them in build)
+<!-- mocks/ -->
+
+# Documentation
+README.md
+assets/
+
+

@@ -12,6 +12,7 @@ import (
 	"github.com/ItsDee25/exchange-rate-service/internal/router"
 	usecase "github.com/ItsDee25/exchange-rate-service/internal/usecase/currency"
 	jobs "github.com/ItsDee25/exchange-rate-service/jobs/currency"
+	"github.com/ItsDee25/exchange-rate-service/mocks"
 	pkg "github.com/ItsDee25/exchange-rate-service/pkg/awsclient"
 	"github.com/gin-gonic/gin"
 )
@@ -36,20 +37,21 @@ func InitServer() {
 	cache := repository.NewRateCache()
 	repositories := builders.NewRepositories().
 		WithCurrencyCache(cache).
-		WithCurrencyRepository(repository.NewDynamoRepository(env.DynamoClient, infra.NewExchangeRateAPI(), cache)).WithDynamoLocker(infra.NewDynamoLocker(env.DynamoClient))
+		WithCurrencyRepository(repository.NewDynamoRepository(env.DynamoClient, mocks.NewMockRateFetcher(), cache)).
+		WithDynamoLocker(infra.NewDynamoLocker(env.DynamoClient))
 
 	// build usecases
 
-	usecases := builders.NewUsecases().WithCurrencyUsecase(usecase.NewCurrencyUsecase(repositories.CurrencyDynamoRepository))
+	usecases := builders.NewUsecases().
+		WithCurrencyUsecase(usecase.NewCurrencyUsecase(repositories.CurrencyDynamoRepository))
 
 	router.RegisterRoutes(r, usecases)
 
-
-	// start cron jobs 
+	// start cron jobs
 
 	refresher := jobs.NewRateRefresher(
 		repositories.CurrencyDynamoRepository,
-		infra.NewExchangeRateAPI(),
+		mocks.NewMockRateFetcher(),
 		repositories.DynamoLocker,
 		constants.SupportedCurrencyPairs,
 	)
@@ -62,5 +64,4 @@ func InitServer() {
 	if err := r.Run(":8080"); err != nil {
 		panic("Failed to start server: " + err.Error())
 	}
-
 }

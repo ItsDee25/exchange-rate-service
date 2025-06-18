@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -36,7 +37,7 @@ func NewMockRateFetcher() *MockRateFetcher {
 	}
 }
 
-func (m *MockRateFetcher) FetchRate(from, to, date string) (float64, error) {
+func (m *MockRateFetcher) FetchRate(ctx context.Context, from, to, date string) (float64, error) {
 	key := fmt.Sprintf("%s#%s", from, to)
 	if rate, ok := m.Rates[key]; ok {
 		return rate, nil

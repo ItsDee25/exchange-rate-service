@@ -1,5 +1,5 @@
 # -------- Build Stage --------
-    FROM golang:1.21-alpine AS builder
+    FROM golang:1.22-alpine AS builder
 
     # Enable Go modules and disable CGO for static build
     ENV CGO_ENABLED=0 GOOS=linux
@@ -13,9 +13,13 @@
     
     # Copy the rest of the application code
     COPY . .
+
+    # Setup cache mounts
+    ENV GOCACHE=/root/.cache/go-build
     
-    # Build the binary
-    RUN go build -o exchange-rate-service ./cmd/server
+    # Build the binary, stripping debugging tools from binary, caching build contents to docker cache
+    RUN --mount=type=cache,target=/root/.cache/go-build \
+    go build -ldflags="-s -w" -o exchange-rate-service ./cmd/server
     
     # -------- Run Stage --------
     FROM alpine:latest
